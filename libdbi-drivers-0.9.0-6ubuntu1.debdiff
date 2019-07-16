@@ -1,0 +1,113 @@
+diff -Nru libdbi-drivers-0.9.0/debian/patches/mysql-5.7.patch libdbi-drivers-0.9.0/debian/patches/mysql-5.7.patch
+--- libdbi-drivers-0.9.0/debian/patches/mysql-5.7.patch	2016-04-11 10:21:54.000000000 +0000
++++ libdbi-drivers-0.9.0/debian/patches/mysql-5.7.patch	1970-01-01 00:00:00.000000000 +0000
+@@ -1,41 +0,0 @@
+-Description: Fix build errors with MySQL 5.7
+- Test script uses deprecated options for mysql_install_db and mysqld.
+- Remove deprecated options and add --insecure and --basedir to the
+- former to preserve previous behavior.
+- Also add -uroot to mysqladmin calls so package can be built without
+- root.
+-Author: Lars Tangvald <lars.tangvald@oracle.com>
+-Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/libdbi-drivers/+bug/1568784
+-Forwarded: no
+-Last-Update: 2016-04-11
+-
+---- libdbi-drivers-0.9.0.orig/tests/test_mysql.sh
+-+++ libdbi-drivers-0.9.0/tests/test_mysql.sh
+-@@ -37,8 +37,8 @@ B=`basename "$MYTMPDIR"`
+- ABSMYTMPDIR="`cd \"$D\" 2>/dev/null && pwd || echo \"$D\"`/$B"
+- 
+- # --force is needed because buildd's can't resolve their own hostnames to ips
+--mysql_install_db --no-defaults --datadir=${ABSMYTMPDIR} --force --skip-name-resolve --user=${ME}
+--$MYMYSQLD --no-defaults --skip-grant --user=${ME} --socket=${ABSMYTMPDIR}/mysql.sock --datadir=${ABSMYTMPDIR} --skip-networking &
+-+mysql_install_db --no-defaults --datadir=${ABSMYTMPDIR} --insecure --basedir=/usr --user=${ME}
+-+$MYMYSQLD --no-defaults --user=${ME} --socket=${ABSMYTMPDIR}/mysql.sock --datadir=${ABSMYTMPDIR} --skip-networking &
+- 
+- # mysqld needs some time to come up to speed. This avoids irritating error messages from the subsequent loop
+- sleep 3
+-@@ -49,7 +49,7 @@ export MYSQL_UNIX_PORT=${ABSMYTMPDIR}/my
+- 
+- echo -n pinging mysqld.
+- attempts=0
+--while ! mysqladmin --socket=${ABSMYTMPDIR}/mysql.sock ping ; do
+-+while ! mysqladmin -uroot --socket=${ABSMYTMPDIR}/mysql.sock ping ; do
+- 	sleep 3
+- 	attempts=$((attempts+1))
+- 	if [ ${attempts} -gt 10 ] ; then
+-@@ -71,6 +71,6 @@ done
+- 
+- ecode=$?
+- 
+--mysqladmin --socket=${ABSMYTMPDIR}/mysql.sock shutdown
+-+mysqladmin -uroot --socket=${ABSMYTMPDIR}/mysql.sock shutdown
+- rm -rf ${ABSMYTMPDIR}
+- exit ${ecode}
+diff -Nru libdbi-drivers-0.9.0/debian/patches/mysql-8.0.patch libdbi-drivers-0.9.0/debian/patches/mysql-8.0.patch
+--- libdbi-drivers-0.9.0/debian/patches/mysql-8.0.patch	1970-01-01 00:00:00.000000000 +0000
++++ libdbi-drivers-0.9.0/debian/patches/mysql-8.0.patch	2019-04-23 05:32:57.000000000 +0000
+@@ -0,0 +1,40 @@
++Description: Fix build errors with MySQL 8.0
++ The mysql_install_db script has been removed, and replaced with
++ the --initialize options for mysqld.
++ Also add -uroot to mysqladmin calls so package can be built without
++ root.
++Author: Lars Tangvald <lars.tangvald@oracle.com>
++Forwarded: no
++Last-Update: 2019-07-16
++
++--- libdbi-drivers-0.9.0.orig/tests/test_mysql.sh
+++++ libdbi-drivers-0.9.0/tests/test_mysql.sh
++@@ -36,9 +36,8 @@ D=`dirname "$MYTMPDIR"`
++ B=`basename "$MYTMPDIR"`
++ ABSMYTMPDIR="`cd \"$D\" 2>/dev/null && pwd || echo \"$D\"`/$B"
++ 
++-# --force is needed because buildd's can't resolve their own hostnames to ips
++-mysql_install_db --no-defaults --datadir=${ABSMYTMPDIR} --force --skip-name-resolve --user=${ME}
++-$MYMYSQLD --no-defaults --skip-grant --user=${ME} --socket=${ABSMYTMPDIR}/mysql.sock --datadir=${ABSMYTMPDIR} --skip-networking &
+++$MYMYSQLD --no-defaults --initialize-insecure --user=${ME} --datadir=${ABSMYTMPDIR}
+++$MYMYSQLD --no-defaults --skip-grant --user=${ME} --socket=${ABSMYTMPDIR}/mysql.sock --datadir=${ABSMYTMPDIR} --skip-networking &
++ 
++ # mysqld needs some time to come up to speed. This avoids irritating error messages from the subsequent loop
++ sleep 3
++@@ -49,7 +48,7 @@ export MYSQL_UNIX_PORT=${ABSMYTMPDIR}/my
++ 
++ echo -n pinging mysqld.
++ attempts=0
++-while ! mysqladmin --socket=${ABSMYTMPDIR}/mysql.sock ping ; do
+++while ! mysqladmin -uroot --socket=${ABSMYTMPDIR}/mysql.sock ping ; do
++ 	sleep 3
++ 	attempts=$((attempts+1))
++ 	if [ ${attempts} -gt 10 ] ; then
++@@ -71,6 +70,6 @@ done
++ 
++ ecode=$?
++ 
++-mysqladmin --socket=${ABSMYTMPDIR}/mysql.sock shutdown
+++mysqladmin -uroot --socket=${ABSMYTMPDIR}/mysql.sock shutdown
++ rm -rf ${ABSMYTMPDIR}
++ exit ${ecode}
+diff -Nru libdbi-drivers-0.9.0/debian/patches/series libdbi-drivers-0.9.0/debian/patches/series
+--- libdbi-drivers-0.9.0/debian/patches/series	2019-04-23 05:32:57.000000000 +0000
++++ libdbi-drivers-0.9.0/debian/patches/series	2019-04-23 05:32:57.000000000 +0000
+@@ -4,5 +4,6 @@
+ disable_some_tests_for_sqlite3.patch
+ fix_ftbfs_on_hurd.patch
+ dbd_sqlite3_resolve_a_stack_buffer_overflow.patch
+-mysql-5.7.patch
++#mysql-5.7.patch
+ freetds-1.0-fix.patch
++mysql-8.0.patch
+diff -Nru libdbi-drivers-0.9.0/debian/test_mysql.sh libdbi-drivers-0.9.0/debian/test_mysql.sh
+--- libdbi-drivers-0.9.0/debian/test_mysql.sh	2018-04-23 22:12:31.000000000 +0000
++++ libdbi-drivers-0.9.0/debian/test_mysql.sh	2019-04-23 05:32:57.000000000 +0000
+@@ -26,8 +26,7 @@
+ MYTEMP_DIR=`mktemp -d`
+ ME=`whoami`
+ 
+-# --force is needed because buildd's can't resolve their own hostnames to ips
+-mysql_install_db --no-defaults --datadir=${MYTEMP_DIR} --insecure --basedir=/usr --user=${ME}
++/usr/sbin/mysqld --no-defaults --initialize-insecure --user=${ME} --datadir=${MYTEMP_DIR}
+ /usr/sbin/mysqld --no-defaults --user=${ME} --socket=${MYTEMP_DIR}/mysql.sock --datadir=${MYTEMP_DIR} --skip-networking &
+ 
+ # This sets the path of the MySQL socket for any libmysql-client users, which includes
